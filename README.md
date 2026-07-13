@@ -1,19 +1,19 @@
 <div align="center">
+  <img src="assets/aerocast.png" alt="Aerocast Logo" width="350">
+
+  <br><br>
+
+  # 🚀 Aerocast
+
+  **Hyper-Scale Spatial Multiplexing & Geofencing for Real-Time State**<br><br>
+  🚀 **~5,000,000 pkts/sec** &nbsp;&bull;&nbsp; 🏎️ **Zero Allocations** &nbsp;&bull;&nbsp; 🛡️ **Instant Geofencing**<br><br>
+  *Powered by 16x16 Fixed Spatial Grids, Count-Min Sketches, and HyperLogLog Analytics.*
   <br>
-  <img src="assets/aerocast.png" width="350" alt="Aerocast Logo">
-  <h1>🚀 Aerocast</h1>
-  <p><b>Hyper-Scale Spatial Multiplexing & Geofencing for Real-Time State</b></p>
-  <br>
-  
-  <a href="https://pkg.go.dev/github.com/krigsherre/aerocast">
-    <img src="https://pkg.go.dev/badge/github.com/krigsherre/aerocast.svg" alt="Go Reference">
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="License">
-  </a>
-  <a href="#performance">
-    <img src="https://img.shields.io/badge/Zero_Allocations-True-success?style=for-the-badge" alt="Zero Allocs">
-  </a>
+
+  [![Go Reference](https://pkg.go.dev/badge/github.com/krigsherre/aerocast.svg)](https://pkg.go.dev/github.com/krigsherre/aerocast)
+  [![Go Report Card](https://goreportcard.com/badge/github.com/krigsherre/aerocast)](https://goreportcard.com/report/github.com/krigsherre/aerocast)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 </div>
 
 ---
