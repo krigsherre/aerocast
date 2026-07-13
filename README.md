@@ -1,6 +1,7 @@
 <div align="center">
   <br>
   <img src="assets/aerocast.png" width="350" alt="Aerocast Logo">
+  <h1>🚀 Aerocast</h1>
   <p><b>Hyper-Scale Spatial Multiplexing & Geofencing for Real-Time State</b></p>
   <br>
   
@@ -34,23 +35,23 @@ Aerocast is built for raw throughput. By utilizing a 16x16 fixed spatial grid, a
 
 Tested on an **Apple M1 Max (10 cores)**. The engine routes coordinate packets through the pipeline, evaluates geofences, and stages egress buffers for WebSocket clients concurrently.
 
-| Benchmark Scenario | Packets / Second | Latency (ns/op) | Memory Allocated |
-| :--- | :---: | :---: | :---: |
-| **Standard Pipeline** | `4,621,264 pkts/sec` | `216.4 ns/op` | `0 B/op` |
-| **99% Spam Simulation** (Bloom filter interception) | `7,093,905 pkts/sec` | `141.0 ns/op` | `0 B/op` |
-| **Realistic Load** (100 geofences, 1,000 subscribers) | `5,025,355 pkts/sec` | `199.0 ns/op` | `0 B/op` |
+```text
+goos: darwin
+goarch: arm64
+pkg: github.com/krigsherre/aerocast/pkg/engine
+cpu: Apple M1 Max
+
+// Standard pipeline
+BenchmarkEnginePipeline-10              5555604       216.4 ns/op     4621264 pkts/sec       0 B/op       0 allocs/op
+
+// Simulating 99% spam from malicious clients (Bloom filter interception)
+BenchmarkEnginePipeline_WithSpam-10     8382646       141.0 ns/op     7093905 pkts/sec       0 B/op       0 allocs/op
+
+// Realistic load (100 geofences, 1,000 subscribers, 100,000 active entities)
+BenchmarkEnginePipeline_Realistic-10    5326860       199.0 ns/op     5025355 pkts/sec       0 B/op       0 allocs/op
+```
 
 > **Takeaway:** Aerocast can ingest, geofence, and route roughly **4.7 Million** location updates per second, without allocating a single byte on the heap.
-
-### 🆚 How does this compare?
-To put 4.7 Million ops/sec into perspective, here is how Aerocast's raw throughput roughly compares to traditional "normal" spatial/pub-sub architectures running on similar hardware:
-
-| Architecture | Est. Max Throughput (Single Node) | Bottleneck |
-| :--- | :--- | :--- |
-| **🚀 Aerocast (Binary + Spatial Grid)** | `~4,700,000 pkts/sec` | CPU Cache Line bounds |
-| **Redis Pub/Sub (C)** | `~1,500,000 ops/sec` | Network / Syscalls |
-| **Standard Go WS + JSON Router** | `~150,000 pkts/sec` | GC Pressure, JSON Parsing |
-| **Node.js / Socket.io + JSON** | `~30,000 pkts/sec` | V8 Event Loop, GC |
 
 ---
 

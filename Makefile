@@ -37,7 +37,6 @@ clean:
 run: build
 	./bin/$(BINARY_NAME) -config configs/default.yaml
 
-# Kernel tuning (run with sudo)
 tune-sysctl:
 	sudo sysctl -w net.core.somaxconn=65535
 	sudo sysctl -w net.ipv4.tcp_max_syn_backlog=65535

@@ -45,9 +45,6 @@ func main() {
 				return
 			}
 			defer conn.Close()
-			
-			// Increase read limit to avoid "message too big" errors on huge spatial updates
-			conn.SetReadLimit(1 << 30)
 
 			for {
 				_, _, err := conn.ReadMessage()
@@ -71,7 +68,6 @@ func main() {
 
 			buf := make([]byte, 20)
 			for {
-				// Pick a random Entity ID up to maxEntities
 				id := uint32(rand.Intn(*maxEntities) + 1)
 				encbin.LittleEndian.PutUint32(buf[0:4], id)
 				coord := aerobin.CoordPacket{

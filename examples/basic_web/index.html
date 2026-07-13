@@ -65,8 +65,6 @@
 
         ws.onmessage = (event) => {
             if (!(event.data instanceof ArrayBuffer)) return;
-
-            // Frame layout: Sequence of [uint32 ID, float64 Lat, float64 Lng] (20 bytes each)
             const view = new DataView(event.data);
             const numRecords = view.byteLength / 20;
 
