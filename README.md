@@ -4,9 +4,16 @@
   <h1>🚀 Aerocast</h1>
   <p><b>Hyper-Scale Spatial Multiplexing & Geofencing for Real-Time State</b></p>
   <br>
-  [![Go Reference](https://pkg.go.dev/badge/github.com/krigsherre/aerocast.svg)](https://pkg.go.dev/github.com/krigsherre/aerocast)
-  [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-  [![Zero Allocs](https://img.shields.io/badge/Zero_Allocations-True-success?style=for-the-badge)](#performance)
+  
+  <a href="https://pkg.go.dev/github.com/krigsherre/aerocast">
+    <img src="https://pkg.go.dev/badge/github.com/krigsherre/aerocast.svg" alt="Go Reference">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="License">
+  </a>
+  <a href="#performance">
+    <img src="https://img.shields.io/badge/Zero_Allocations-True-success?style=for-the-badge" alt="Zero Allocs">
+  </a>
 </div>
 
 ---
