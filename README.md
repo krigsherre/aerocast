@@ -1,2 +1,2 @@
-# zerohop
-An ultra-high throughput durable local event broker for Go. Zero network hops. Zero allocation. 50M+ ops/sec.
+# aerocast
+High-performance spatial multiplexing for real-time state. Uses raw binary packing and sharded in-memory grids to stream massive location data with zero heap allocations.
