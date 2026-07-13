@@ -4,11 +4,9 @@
   <h1>🚀 Aerocast</h1>
   <p><b>Hyper-Scale Spatial Multiplexing & Geofencing for Real-Time State</b></p>
   <br>
-  
-  [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go)](https://golang.org)
+  [![Go Reference](https://pkg.go.dev/badge/github.com/krigsherre/aerocast.svg)](https://pkg.go.dev/github.com/krigsherre/aerocast)
   [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
   [![Zero Allocs](https://img.shields.io/badge/Zero_Allocations-True-success?style=for-the-badge)](#performance)
-  [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=for-the-badge)](#)
 </div>
 
 ---
@@ -19,7 +17,7 @@ Whether you're building the next Uber, a real-time multiplayer game, or tracking
 
 ## 🔥 Why Aerocast?
 
-Aerocast is built for raw throughput. By utilizing a 16x16 fixed spatial grid, advanced probabilistic data structures, and raw binary serialization, it achieves **~5,000,000 packets per second** on a single CPU core.
+Aerocast is built for raw throughput. By utilizing a 16x16 fixed spatial grid, advanced probabilistic data structures, and raw binary serialization, it achieves **~5,000,000 packets per second** on modern multi-core hardware.
 
 | Feature | Description |
 |---|---|
@@ -57,30 +55,47 @@ BenchmarkEnginePipeline_Realistic-10    5326860       199.0 ns/op     5025355 pk
 
 ## 🏗️ Architecture
 
-Aerocast is built as an asynchronous, lock-free (where possible) pipeline:
+Aerocast is built as an asynchronous, zero-allocation pipeline. The architecture is designed to drop bad data as early as possible before it reaches the expensive spatial routing logic.
 
 ```mermaid
-graph LR
-    subgraph Ingress
-        UDP[UDP Devices] --> Listener
-        API[Your Go App] --> Engine
+flowchart TD
+    %% Modern Styling
+    classDef default fill:#1f2937,stroke:#374151,stroke-width:2px,color:#f3f4f6,rx:8,ry:8
+    classDef ingress fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef pipeline fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef egress fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef filter fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef data fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff,rx:8,ry:8
+
+    subgraph Ingress [Ingress Layer]
+        UDP[UDP Devices]:::ingress --> |Binary Packets| Transport[UDP Listener]:::ingress
+        API[Go API]:::ingress --> |Direct Publish| Core
     end
     
-    subgraph Aerocast Pipeline
-        Listener -->|Binary| Engine
-        Engine -->|Bloom Filter Dedupe| Engine
-        Engine -->|Count-Min Sketch Throttle| Engine
-        Engine --> SpatialGrid[(16x16 Grid)]
-        Engine --> Geofence[Geofence Evaluator]
-        Geofence --"Trigger"--> Callbacks[OnEnter/OnExit]
-        Engine --> Fanout[Fanout Channel]
+    subgraph Pipeline [Zero-Alloc Pipeline]
+        Transport --> Core[Engine Core]:::pipeline
+        Core --> Bloom[Bloom Filter]:::filter
+        Bloom --> CMS[Count-Min Sketch]:::filter
+        CMS --> Grid[(16x16 Spatial Grid)]:::data
+        
+        Grid --> Geo[Geofence Evaluator]:::pipeline
+        Grid --> HLL[HyperLogLog Analytics]:::pipeline
+        
+        Geo -.-> |Trigger| CB[Callbacks]:::pipeline
     end
     
-    subgraph Egress
-        Fanout --> WS1[WebSocket Client]
-        Fanout --> WS2[WebSocket Client]
+    subgraph Egress [Egress Layer]
+        Grid --> Fanout[Fanout Engine]:::egress
+        Fanout --> |State Sync| WS1[Web Client]:::egress
+        Fanout --> |State Sync| WS2[Web Client]:::egress
     end
 ```
+
+### 🌊 Pipeline Stages
+1. **Ingress:** Accepts raw binary structs over UDP or direct programmatic API calls.
+2. **Filtering:** Utilizes probabilistic data structures (Bloom Filters and Count-Min Sketches) to drop duplicate packets and rate-limit abusive entities instantly.
+3. **Spatial Indexing:** Resolves coordinates to a highly optimized 16x16 spatial grid. Maintains HyperLogLog registers for distinct entity counting.
+4. **Geofencing & Fanout:** Evaluates actionable geofences (triggering your callbacks) and streams relevant regional state to WebSocket subscribers.
 
 ---
 
@@ -88,9 +103,17 @@ graph LR
 
 Aerocast is primarily designed as an **Embeddable Go Library** so you can wire it directly into your application's business logic. However, it also ships with a Standalone Daemon (`aerocastd`) if you just want a pre-compiled router.
 
-### 1. As a Library (Recommended)
+### 1. Installation
 
-Embedding Aerocast into your existing Go monolith is extremely easy.
+To install Aerocast into your project, run:
+
+```bash
+go get github.com/krigsherre/aerocast
+```
+
+### 2. As a Library (Recommended)
+
+Embedding Aerocast into your existing Go monolith is extremely easy. The `aerocast` package exposes a simple API to configure and run the routing engine. You can define geofences, register callbacks, and feed data programmatically.
 
 ```go
 package main
@@ -109,31 +132,45 @@ func main() {
 	logger, _ := zap.NewProduction()
 	cfg.Logger = logger
 
-	// 2. Define your business logic!
+	// 2. Define Geofences
+	// Add a circular geofence centered at San Francisco with a 5km radius
+	cfg.Geofences = append(cfg.Geofences, aerocast.GeofenceConfig{
+		Name:   "SanFrancisco-Downtown",
+		Lat:    37.7749,
+		Lon:    -122.4194,
+		Radius: 5000,
+	})
+
+	// 3. Define your business logic!
+	// These callbacks fire in real-time when entities cross geofence boundaries.
 	cfg.OnGeofenceEnter = func(entityID uint32, fenceName string) {
 		logger.Info("Entity Entered Zone!", zap.Uint32("id", entityID), zap.String("zone", fenceName))
 		// e.g., Send a Push Notification, unlock a scooter, alert police, etc.
 	}
+	cfg.OnGeofenceExit = func(entityID uint32, fenceName string) {
+		logger.Info("Entity Left Zone!", zap.Uint32("id", entityID), zap.String("zone", fenceName))
+	}
 
-	// 3. Initialize the Engine
+	// 4. Initialize the Engine
 	engine, err := aerocast.New(cfg)
 	if err != nil {
 		logger.Fatal("failed to start aerocast", zap.Error(err))
 	}
 
-	// 4. Feed data programmatically (if bypassing UDP)
+	// 5. Feed data programmatically (if bypassing UDP)
 	go func() {
 		// Pushing a location update for Entity ID 42 in San Francisco
 		engine.Publish(42, 37.7749, -122.4194)
 	}()
 
-	// 5. Run the engine (blocks until context is cancelled)
+	// 6. Run the engine (blocks until context is cancelled)
+	// You can also start it in a goroutine: go engine.Run(ctx)
 	ctx := context.Background()
 	engine.Run(ctx)
 }
 ```
 
-### 2. Full Example (Web Frontend)
+### 3. Full Example (Web Frontend)
 
 To see Aerocast in action with a real HTML/Canvas visualizer connecting via WebSocket:
 
@@ -166,3 +203,7 @@ make build
 
 ## 🤝 Contributing
 PRs are welcome! When contributing to the core engine, please ensure that you do not introduce heap allocations on the hot path. Verify with `go test -bench=. -benchmem`.
+
+## 📄 License
+
+Aerocast is licensed under the MIT License. See [LICENSE](LICENSE) for the full text.
