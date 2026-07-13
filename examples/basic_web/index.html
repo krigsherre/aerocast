@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aerocast Live Demo</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #1a1a2e;
+            color: white;
+            padding: 20px;
+        }
+
+        #map {
+            width: 800px;
+            height: 600px;
+            background: #16213e;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #0f3460;
+            margin-top: 20px;
+        }
+
+        .entity {
+            width: 6px;
+            height: 6px;
+            background: #e94560;
+            border-radius: 50%;
+            position: absolute;
+            transition: transform 0.1s linear;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Aerocast Live Stream</h1>
+    <p>This page connects via WebSocket to the Aerocast engine (listening on :9100). The engine is fanning out binary
+        spatial data for 100 simulated entities.</p>
+    <div>
+        <strong>Connection Status: </strong><span id="status" style="color: yellow">Connecting...</span> |
+        <strong>Entities Tracked: </strong><span id="count">0</span>
+    </div>
+    <div id="map"></div>
+
+    <script>
+        const statusEl = document.getElementById("status");
+        const countEl = document.getElementById("count");
+        const mapEl = document.getElementById("map");
+        const entities = new Map();
+
+        const ws = new WebSocket("ws://127.0.0.1:9100/ws?lat=37.7749&lng=-122.4194&radius=1000000");
+        ws.binaryType = "arraybuffer";
+
+        ws.onopen = () => {
+            statusEl.innerText = "Connected";
+            statusEl.style.color = "lightgreen";
+        };
+
+        ws.onclose = () => {
+            statusEl.innerText = "Disconnected";
+            statusEl.style.color = "red";
+        };
+
+        ws.onmessage = (event) => {
+            if (!(event.data instanceof ArrayBuffer)) return;
+
+            // Frame layout: Sequence of [uint32 ID, float64 Lat, float64 Lng] (20 bytes each)
+            const view = new DataView(event.data);
+            const numRecords = view.byteLength / 20;
+
+            for (let i = 0; i < numRecords; i++) {
+                const offset = i * 20;
+                const id = view.getUint32(offset, true);      // true = little endian
+                const lat = view.getFloat64(offset + 4, true);
+                const lng = view.getFloat64(offset + 12, true);
+
+                updateEntity(id, lat, lng);
+            }
+
+            countEl.innerText = entities.size;
+        };
+
+        function updateEntity(id, lat, lng) {
+            const baseX = 400;
+            const baseY = 300;
+
+            const scale = 30000;
+            const x = baseX + (lng - -122.4194) * scale;
+            const y = baseY - (lat - 37.7749) * scale;
+
+            let el = entities.get(id);
+            if (!el) {
+                el = document.createElement('div');
+                el.className = 'entity';
+                mapEl.appendChild(el);
+                entities.set(id, el);
+            }
+
+            el.style.transform = `translate(${x}px, ${y}px)`;
+        }
+    </script>
+</body>
+
+</html>
