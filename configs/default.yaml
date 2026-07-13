@@ -1,0 +1,32 @@
+server:
+  ws_listen: ":9100"
+  udp_listen: ":9101"
+  metrics_listen: ":9102"
+  max_connections: 500000
+  read_timeout: "5s"
+  write_timeout: "5s"
+
+spatial:
+  grid_shards: 256
+  cell_size_m: 500
+
+engine:
+  tick_rate: "50ms"
+  pipeline_workers: 4
+  max_entities: 2000000
+
+websocket:
+  ping_interval: "30s"
+  pong_timeout: "10s"
+  max_frame_size: 1024
+  write_buffer_per_conn: 64
+  writer_count: 4
+
+udp:
+  batch_size: 32
+  read_buffer: 4194304 
+  channel_size: 65536
+
+logging:
+  level: "info" 
+  format: "json"   
