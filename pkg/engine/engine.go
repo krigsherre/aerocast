@@ -15,6 +15,13 @@ import (
 	"go.uber.org/zap"
 )
 
+const prevPosShards = 128
+
+type prevPosShard struct {
+	mu sync.RWMutex
+	m  map[spatial.EntityID]*binary.CoordPacket
+}
+
 type Engine struct {
 	cfg            Config
 	grid           *spatial.SpatialGrid
@@ -23,9 +30,7 @@ type Engine struct {
 	fanout         *fanout.Engine
 	udp            *udpTransport.Listener
 	ws             *wsTransport.Server
-	prevMu         sync.RWMutex
-	prevPos        map[spatial.EntityID]*binary.CoordPacket
-	bloom          *tickBloomFilter
+	prevPosShards  [prevPosShards]prevPosShard
 	cms            *countMinSketch
 	shardHLL       [256]*HyperLogLog
 	packetsRouted  atomic.Uint64
@@ -70,10 +75,12 @@ func NewEngine(cfg Config) (*Engine, error) {
 		evaluator: evaluator,
 		fanout:    fanoutEngine,
 		udp:       udpListener,
-		prevPos:   make(map[spatial.EntityID]*binary.CoordPacket, 65536),
-		bloom:     &tickBloomFilter{},
 		cms:       &countMinSketch{},
 		done:      make(chan struct{}),
+	}
+
+	for i := 0; i < prevPosShards; i++ {
+		e.prevPosShards[i].m = make(map[spatial.EntityID]*binary.CoordPacket, 512)
 	}
 
 	for i := 0; i < 256; i++ {

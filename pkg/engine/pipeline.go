@@ -37,30 +37,34 @@ func (e *Engine) ProcessPacket(pkt udpTransport.IngressPacket) {
 		return
 	}
 
-	if e.bloom.checkAndAdd(id) {
+	shardIdx := id % prevPosShards
+	shard := &e.prevPosShards[shardIdx]
+
+	shard.mu.RLock()
+	prev := shard.m[spatial.EntityID(id)]
+	shard.mu.RUnlock()
+
+	if prev != nil && prev.Lat == coord.Lat && prev.Lng == coord.Lng {
 		e.packetsDropped.Add(1)
 		return
 	}
 
-	e.prevMu.RLock()
-	prev := e.prevPos[spatial.EntityID(id)]
-	e.prevMu.RUnlock()
-
-	e.grid.Route(spatial.EntityID(id), coord)
+	e.grid.RouteWithPrevious(spatial.EntityID(id), coord, prev)
 
 	events := e.evaluator.EvaluateMove(spatial.EntityID(id), prev, coord)
 	e.eventsFired.Add(uint64(len(events)))
 
-	e.prevMu.Lock()
-	if prev == nil {
-		e.prevPos[spatial.EntityID(id)] = &binary.CoordPacket{}
-		prev = e.prevPos[spatial.EntityID(id)]
+	shard.mu.Lock()
+	p := shard.m[spatial.EntityID(id)]
+	if p == nil {
+		p = &binary.CoordPacket{}
+		shard.m[spatial.EntityID(id)] = p
 	}
-	*prev = coord
-	e.prevMu.Unlock()
+	*p = coord
+	shard.mu.Unlock()
 
-	shard := spatial.ShardKey(coord.Lat, coord.Lng)
-	e.shardHLL[shard].Add(id)
+	gridShard := spatial.ShardKey(coord.Lat, coord.Lng)
+	e.shardHLL[gridShard].Add(id)
 
 	e.packetsRouted.Add(1)
 }
@@ -77,7 +81,6 @@ func (e *Engine) tickLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			e.cms.reset()
-			e.bloom.reset()
 			e.broadcastTick()
 		}
 	}
