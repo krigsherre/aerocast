@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"github.com/krigsherre/aerocast/pkg/binary"
 	"github.com/krigsherre/aerocast/pkg/fanout"
 	"github.com/krigsherre/aerocast/pkg/spatial"
 	"go.uber.org/zap"
@@ -35,4 +36,36 @@ func (e *Engine) OnDisconnect(subID uint64) {
 
 func (e *Engine) Channels() *fanout.ChannelManager {
 	return e.fanout.Channels()
+}
+
+func (e *Engine) SeedPosition(entityID uint32, lat, lng float64) {
+	shardIdx := entityID % prevPosShards
+	shard := &e.prevPosShards[shardIdx]
+
+	coord := binary.CoordPacket{
+		Lat: lat,
+		Lng: lng,
+	}
+
+	shard.mu.Lock()
+	shard.m[spatial.EntityID(entityID)] = &coord
+	shard.mu.Unlock()
+
+	e.grid.Route(spatial.EntityID(entityID), coord)
+}
+
+func (e *Engine) SubscribersInCell(cell uint8) int {
+	return e.fanout.SubscribersInCell(cell)
+}
+
+func (e *Engine) ShardStats() [spatial.ShardCount]int {
+	return e.grid.ShardStats()
+}
+
+func (e *Engine) Follow(subID uint64, entityID uint32) {
+	e.fanout.Follow(fanout.SubscriberID(subID), spatial.EntityID(entityID))
+}
+
+func (e *Engine) Unfollow(subID uint64, entityID uint32) {
+	e.fanout.Unfollow(fanout.SubscriberID(subID), spatial.EntityID(entityID))
 }

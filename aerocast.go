@@ -45,3 +45,23 @@ func (e *Engine) Publish(entityID uint32, lat, lng float64) {
 	}
 	e.eng.ProcessPacket(pkt)
 }
+
+func (e *Engine) SeedPosition(entityID uint32, lat, lng float64) {
+	e.eng.SeedPosition(entityID, lat, lng)
+}
+
+func (e *Engine) SubscribersInCell(cell uint8) int {
+	return e.eng.SubscribersInCell(cell)
+}
+
+func (e *Engine) ShardStats() [256]int {
+	return e.eng.ShardStats()
+}
+
+func (e *Engine) Follow(subID uint64, entityID uint32) {
+	e.eng.Follow(subID, entityID)
+}
+
+func (e *Engine) Unfollow(subID uint64, entityID uint32) {
+	e.eng.Unfollow(subID, entityID)
+}
