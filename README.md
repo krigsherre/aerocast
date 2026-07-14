@@ -6,7 +6,7 @@
   # 🚀 Aerocast
 
   **Hyper-Scale Spatial Multiplexing & Geofencing for Real-Time State**<br><br>
-  🚀 **~5,000,000 pkts/sec** &nbsp;&bull;&nbsp; 🏎️ **Zero Allocations** &nbsp;&bull;&nbsp; 🛡️ **Instant Geofencing**<br><br>
+  🚀 **~4,700,000 pkts/sec** &nbsp;&bull;&nbsp; 🏎️ **Zero Allocations** &nbsp;&bull;&nbsp; 🛡️ **Instant Geofencing**<br><br>
   *Powered by 16x16 Fixed Spatial Grids, Count-Min Sketches, and HyperLogLog Analytics.*
   <br>
 
@@ -47,13 +47,13 @@ pkg: github.com/krigsherre/aerocast/pkg/engine
 cpu: Apple M1 Max
 
 // Standard pipeline
-BenchmarkEnginePipeline-10              5555604       216.4 ns/op     4621264 pkts/sec       0 B/op       0 allocs/op
+BenchmarkEnginePipeline-10              5441305       213.5 ns/op     4683128 pkts/sec       1 B/op       0 allocs/op
 
 // Simulating 99% spam from malicious clients (Bloom filter interception)
-BenchmarkEnginePipeline_WithSpam-10     8382646       141.0 ns/op     7093905 pkts/sec       0 B/op       0 allocs/op
+BenchmarkEnginePipeline_WithSpam-10     8091152       150.8 ns/op     6632987 pkts/sec       0 B/op       0 allocs/op
 
 // Realistic load (100 geofences, 1,000 subscribers, 100,000 active entities)
-BenchmarkEnginePipeline_Realistic-10    5326860       199.0 ns/op     5025355 pkts/sec       0 B/op       0 allocs/op
+BenchmarkEnginePipeline_Realistic-10    5546397       213.4 ns/op     4686515 pkts/sec       6 B/op       0 allocs/op
 ```
 
 > **Takeaway:** Aerocast can ingest, geofence, and route roughly **4.7 Million** location updates per second, without allocating a single byte on the heap.

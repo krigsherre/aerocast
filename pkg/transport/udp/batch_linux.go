@@ -3,6 +3,7 @@
 package udp
 
 import (
+	"fmt"
 	"syscall"
 	"time"
 	"unsafe"
@@ -15,12 +16,10 @@ type mmsghdr struct {
 }
 
 func (l *Listener) readAndProcessBatch(buf []byte) error {
-	fd, err := l.conn.File()
-	if err != nil {
-		return err
+	rawFD := l.rawFD
+	if rawFD == 0 {
+		return fmt.Errorf("udp: raw file descriptor not initialized")
 	}
-	rawFD := int(fd.Fd())
-	fd.Close()
 
 	batchSize := l.cfg.BatchSize
 	slotSize := len(buf) / batchSize
