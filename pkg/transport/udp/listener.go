@@ -32,6 +32,7 @@ func DefaultConfig() Config {
 type Listener struct {
 	cfg            Config
 	conn           *net.UDPConn
+	rawFD          int
 	out            chan IngressPacket
 	wg             sync.WaitGroup
 	done           chan struct{}
@@ -54,11 +55,20 @@ func NewListener(cfg Config) (*Listener, error) {
 		return nil, fmt.Errorf("udp: set read buffer: %w", err)
 	}
 
+	var rawFD int
+	rawConn, err := conn.SyscallConn()
+	if err == nil {
+		_ = rawConn.Control(func(fd uintptr) {
+			rawFD = int(fd)
+		})
+	}
+
 	return &Listener{
-		cfg:  cfg,
-		conn: conn,
-		out:  make(chan IngressPacket, cfg.ChannelSize),
-		done: make(chan struct{}),
+		cfg:   cfg,
+		conn:  conn,
+		rawFD: rawFD,
+		out:   make(chan IngressPacket, cfg.ChannelSize),
+		done:  make(chan struct{}),
 	}, nil
 }
 
