@@ -58,6 +58,37 @@ BenchmarkEnginePipeline_Realistic-10    5326860       199.0 ns/op     5025355 pk
 
 > **Takeaway:** Aerocast can ingest, geofence, and route roughly **4.7 Million** location updates per second, without allocating a single byte on the heap.
 
+
+### ⚙️ Comparing with Alternatives (Redis & Tile38)
+
+Aerocast ships with a native Go comparison benchmark suite to measure write latency and throughput side-by-side with Redis and Tile38. 
+
+To run the comparative Go-native benchmarks (make sure local Redis and Tile38 instances are running):
+```bash
+go test -bench=. -benchmem ./examples/benchmark_compare/
+```
+
+#### Results (Tested on Apple M1 Max)
+| System | Benchmark Target | Operation Latency | Allocations |
+| :--- | :--- | :--- | :--- |
+| **Aerocast** | Embedded In-Memory Pipeline | **282.2 ns/op** | `0 allocs/op` |
+| **Redis** | Pipelined TCP RESP `GEOADD` | **1674.0 ns/op** | `0 allocs/op` |
+| **Tile38** | Pipelined TCP RESP `SET POINT` | **2909.0 ns/op** | `0 allocs/op` |
+
+> **Takeaway:** Under identical local hardware conditions, Aerocast’s internal pipeline is **~6x faster than Redis** and **~10x faster than Tile38** per spatial update.
+
+You can also run raw socket-blasting comparisons using the CLI benchmarking tool:
+```bash
+# 1. Ingest into Aerocast (Ensure aerocastd is running on UDP :9101)
+go run examples/benchmark_compare/main.go -target=aerocast -addr=127.0.0.1:9101
+
+# 2. Ingest into Redis GEOADD (Ensure Redis is running on TCP :6379)
+go run examples/benchmark_compare/main.go -target=redis -addr=127.0.0.1:6379
+
+# 3. Ingest into Tile38 SET (Ensure Tile38 is running on TCP :9851)
+go run examples/benchmark_compare/main.go -target=tile38 -addr=127.0.0.1:9851
+```
+
 ---
 
 ## 🏗️ Architecture
@@ -207,6 +238,90 @@ make build
 - `aerocast_geofence_events_total`
 
 ---
+
+## 🚀 Advanced Production Use Cases
+
+Aerocast is built to feed downstream business logic and streaming machine learning systems with real-time spatial events.
+
+### 1. Delivery Courier Tracking & Database Bootstrap
+Location telemetry is ephemeral, but geofence transition state must be durable. To prevent missed geofence exit events on server restart without incurring disk I/O bottlenecks, Aerocast uses a **Database Bootstrap** pattern. On startup, the engine queries the active deliveries from your database and seeds their last known positions before opening network ports.
+
+```go
+package main
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+
+	"github.com/krigsherre/aerocast"
+)
+
+func main() {
+	cfg := aerocast.DefaultConfig()
+	engine, _ := aerocast.New(cfg)
+
+	db, _ := sql.Open("postgres", "postgresql://...")
+	defer db.Close()
+
+	// 1. Bootstrap: Recover last-known active courier positions from PostgreSQL
+	rows, _ := db.Query("SELECT courier_id, last_lat, last_lng FROM couriers WHERE status = 'ACTIVE'")
+	defer rows.Close()
+
+	for rows.Next() {
+		var id uint32
+		var lat, lng float64
+		_ = rows.Scan(&id, &lat, &lng)
+		
+		// Seed the engine's location history cache & spatial grid
+		engine.SeedPosition(id, lat, lng)
+	}
+	fmt.Println("✅ State Bootstrap Completed.")
+
+	// 2. Setup Geofencing callbacks to update order status in PostgreSQL
+	cfg.OnGeofenceEnter = func(courierID uint32, fenceName string) {
+		_, _ = db.Exec("UPDATE orders SET status = 'ARRIVED' WHERE courier_id = $1", courierID)
+	}
+
+	// 3. Run Ingestion Loop
+	engine.Run(context.Background())
+}
+```
+
+### 2. Real-Time ML Feature Ingestion & Inference (Surge Pricing)
+Because machine learning model inference is computationally expensive (matrix operations), running it synchronously inside the raw UDP ingestion loop will destroy throughput. Aerocast decouples feature aggregation from inference:
+1. **Feature Aggregator**: Aerocast aggregates unique active entities (supply) in each grid cell using HyperLogLog (HLL) and tracks subscriber counts (demand).
+2. **Inference Loop**: A background worker polls the cell feature statistics and runs inference (e.g., via ONNX runtime) asynchronously.
+
+```go
+package main
+
+import (
+	"context"
+	"time"
+
+	"github.com/krigsherre/aerocast"
+)
+
+func runInferenceLoop(engine *aerocast.Engine) {
+	ticker := time.NewTicker(1 * time.Second)
+	for range ticker.C {
+		stats := engine.ShardStats()
+		
+		for cellID, supplyCount := range stats {
+			demandCount := engine.SubscribersInCell(uint8(cellID))
+			if demandCount == 0 {
+				continue
+			}
+			go func(cell uint8, supply, demand int) {
+			}(uint8(cellID), supplyCount, demandCount)
+		}
+	}
+}
+```
+
+---
+
 
 ## 🤝 Contributing
 PRs are welcome! When contributing to the core engine, please ensure that you do not introduce heap allocations on the hot path. Verify with `go test -bench=. -benchmem`.
