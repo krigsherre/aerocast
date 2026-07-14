@@ -68,14 +68,14 @@ To run the comparative Go-native benchmarks (make sure local Redis and Tile38 in
 go test -bench=. -benchmem ./examples/benchmark_compare/
 ```
 
-#### Results (Tested on Apple M1 Max)
+#### Results (Parallelized, Tested on Apple M1 Max)
 | System | Benchmark Target | Operation Latency | Allocations |
 | :--- | :--- | :--- | :--- |
-| **Aerocast** | Embedded In-Memory Pipeline | **282.2 ns/op** | `0 allocs/op` |
-| **Redis** | Pipelined TCP RESP `GEOADD` | **1674.0 ns/op** | `0 allocs/op` |
-| **Tile38** | Pipelined TCP RESP `SET POINT` | **2909.0 ns/op** | `0 allocs/op` |
+| **Aerocast** | Parallel Embedded Pipeline | **271.9 ns/op** | `0 allocs/op` |
+| **Redis** | Parallel TCP RESP `GEOADD` | **896.4 ns/op** | `0 allocs/op` |
+| **Tile38** | Parallel TCP RESP `SET POINT` | **36197.0 ns/op** | `0 allocs/op` |
 
-> **Takeaway:** Under identical local hardware conditions, Aerocast’s internal pipeline is **~6x faster than Redis** and **~10x faster than Tile38** per spatial update.
+> **Takeaway:** Under identical parallel hardware conditions, Aerocast’s internal pipeline is **~3.3x faster than Redis** and **~133x faster than Tile38** per spatial update.
 
 You can also run raw socket-blasting comparisons using the CLI benchmarking tool:
 ```bash

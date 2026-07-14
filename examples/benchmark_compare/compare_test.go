@@ -10,7 +10,6 @@ import (
 	"github.com/krigsherre/aerocast"
 )
 
-// BenchmarkAerocastInternal measures Aerocast's raw, in-memory pipeline throughput.
 func BenchmarkAerocastInternal(b *testing.B) {
 	cfg := aerocast.DefaultConfig()
 	cfg.DisableUDP = true
@@ -23,7 +22,7 @@ func BenchmarkAerocastInternal(b *testing.B) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
+
 	go func() {
 		_ = engine.Run(ctx)
 	}()
@@ -41,7 +40,6 @@ func BenchmarkAerocastInternal(b *testing.B) {
 	})
 }
 
-// BenchmarkRedisGeo measures the TCP/RESP write throughput to an external Redis instance.
 func BenchmarkRedisGeo(b *testing.B) {
 	conn, err := net.Dial("tcp", "127.0.0.1:6379")
 	if err != nil {
@@ -49,7 +47,6 @@ func BenchmarkRedisGeo(b *testing.B) {
 	}
 	defer conn.Close()
 
-	// Drain the connection responses in a background thread to prevent buffer clogging
 	go func(c net.Conn) {
 		tmp := make([]byte, 4096)
 		for {
@@ -74,7 +71,6 @@ func BenchmarkRedisGeo(b *testing.B) {
 	_ = writer.Flush()
 }
 
-// BenchmarkTile38SET measures the TCP/RESP write throughput to an external Tile38 instance.
 func BenchmarkTile38SET(b *testing.B) {
 	conn, err := net.Dial("tcp", "127.0.0.1:9851")
 	if err != nil {
@@ -82,7 +78,6 @@ func BenchmarkTile38SET(b *testing.B) {
 	}
 	defer conn.Close()
 
-	// Drain the connection responses in a background thread to prevent buffer clogging
 	go func(c net.Conn) {
 		tmp := make([]byte, 4096)
 		for {
